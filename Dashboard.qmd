@@ -395,7 +395,7 @@ div(
 According to Powell & Thyne (2011), Bolivia has the highest number of verified coup d'états (successful and unsuccessful) from 1950 to 2010.<br>Let's investigate the regime changes at each verified attempt.
 :::
 
-:::{.card height="75%"}
+:::{.card height="80%"}
 
 ```{r}
 # Identify country of interest (highest number of verified )
