@@ -1,0 +1,79 @@
+---
+title: "Jett"
+format: html
+editor: visual
+---
+
+```{r}
+#| label: dependencies
+
+library(tidyverse)
+library(here)
+library(plotly)
+```
+
+```{r}
+#| label: data
+#| wanring: false
+
+democracy <- read_csv(here("Data", "democracy.csv"))
+coups <- read_tsv("http://www.uky.edu/~clthyn2/coup_data/candidate_dataset.txt")
+```
+
+```{r}
+#| label: identify-country-of-interest
+
+country_of_interest <- coups |>
+  filter(verified %in% c(1, 2)) |>
+  count(country, sort = TRUE) |>
+  slice_head(n = 1) |>
+  pull(country)
+```
+
+Other sources suggest Sudan is the country with the highest number of coup attempts, but we'll go with Bolivia since it's supported by our data, noting this discrepancy where appropriate.
+
+```{r}
+#| label: prepare-data-for-plotting
+
+plot_data <- coups |>
+  filter(country == country_of_interest) |>
+  drop_na(verified) |>
+  arrange(year, month, day) |>
+  mutate(coup_number = row_number(),
+         coup_result = if_else(verified == 2, "Successful", "Unsuccessful")) |>
+  left_join(democracy |>
+              arrange(country_name, year) |>
+              group_by(country_name) |>
+              mutate(regime_after = lead(regime_category)) |>
+              ungroup(),
+            by = c("country" = "country_name", "year" = "year")) |>
+  relocate(coup_number, coup_result, regime_category, regime_after, .after = day) |>
+  mutate(hover_text = str_glue("Country: {country}<br>",
+                               "Date: {month}-{day}-{year}<br>",
+                               "Coup Attempt #: {coup_number}<br>",
+                               "Result: {coup_result}<br>",
+                               "Regime Before: {regime_category}<br>",
+                               "Regime After: {regime_after}"))
+```
+
+```{r}
+#| label: country-of-interest-plot
+
+plot <- plot_data |>
+  ggplot(aes(x = year,
+             y = coup_number,
+             color = coup_result,
+             text = hover_text,
+             group = 1)) +
+  geom_line(color = "gray60") +
+  geom_point(size = 3) +
+  scale_color_manual(values = c("Successful" = "#ee6b6e",
+                                "Unsuccessful" = "steelblue")) +
+  labs(title = "Bolivian Coup d'états (<span style='color:#ee6b6e;'>Successful</span> & <span style='color:steelblue;'>Unsuccessful</span>)",
+       y = "Count",
+       x = "Year") +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+ggplotly(plot, tooltip = "text")
+```
