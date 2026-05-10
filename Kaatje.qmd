@@ -1,0 +1,158 @@
+---
+title: "Kaatje"
+format: html
+---
+
+```{r}
+library(tidyverse)
+library(here)
+library(leaflet)
+library(sf)
+library(rnaturalearth)
+```
+
+```{r}
+#| label: data
+#| wanring: false
+
+democracy <- read_csv(here("Data", "democracy.csv"))
+```
+
+```{r}
+factpal <- colorFactor(topo.colors(2), democracy$is_democracy)
+map <- leaflet(democracy) |>
+  addTiles() |>
+  addPolygons(stroke = FALSE, smoothFactor = 0.2, fillOpacity = 1,
+    color = ~factpal(is_democracy))
+```
+
+```{r}
+#| label: map-democracy-or-not-map
+
+world_democracy |>
+  ggplot() +
+  geom_sf(aes(fill = factor(is_democracy,
+                            levels = c(FALSE, TRUE),
+                            labels = c("No", "Yes"))),
+          linewidth = 0.05) +
+  labs(title = "<span style='color:steelblue'><b>Democratic</b></span> and <span style='color:#ee6b6e'><b>Non-Democratic</b></span> Regimes Around the Globe",
+       subtitle = "Non-Democratic Regimes Conentrated In Africa & Asia",
+       alt = "World map showing countries colored by regime type. Democratic countries are shown in blue, and non-democratic countries are shown in red.") +
+  scale_fill_manual(values = c("No" = "#ee6b6e",
+                               "Yes" = "steelblue")) +
+  theme_bw() +
+  theme(legend.position = "none",
+        plot.title = element_markdown())
+
+```
+
+
+
+
+```{r}
+# Most recent year for each country, for coloring purpose
+recent <- democracy %>%
+  group_by(country_code) %>%
+  slice_max(year, n = 1) %>%
+  ungroup() %>%
+  select(country_code, year, is_democracy)
+```
+
+```{r}
+# Save global map geometries
+world <- ne_countries(scale = "medium", returnclass = "sf")
+
+# Combine democracy data with global map geometries
+world_democracy <- world |>
+  left_join(recent, by = c("adm0_a3" = "country_code"))
+```
+
+```{r}
+# Collect centroids for markers
+centroids <- st_centroid(world_democracy)
+coords <- st_coordinates(centroids)
+
+markers_coord <- centroids %>%
+  mutate(
+    lng = coords[,1],
+    lat = coords[,2]
+  )
+```
+
+```{r}
+# color palette for current democracy
+dem_palette <- colorFactor(
+  palette = c("FALSE" = "#ee6b6e",
+              "TRUE" = "steelblue"),
+  domain = c(FALSE, TRUE),
+  na.color = "gray"
+)
+```
+
+```{r}
+# Regime History markers
+# Keep only years where regime changes
+regime_changes <- democracy %>%
+  arrange(country_code, year) %>%
+  group_by(country_code) %>%
+  mutate(prev_regime = lag(regime_category)) %>%
+  filter(year == min(year) | regime_category != prev_regime) %>%
+  ungroup()
+
+# HTML text for markers
+marker_data <- regime_changes %>%
+  arrange(country_code, year) %>%
+  group_by(country_code, country_name) %>%
+  summarise(
+    regime_text = paste0(
+      "<b>", first(country_name), "</b><br/>",
+      paste0(year, ": ", regime_category, collapse = "<br/>")
+    ),
+    .groups = "drop"
+  )
+# join with coords for all marker data
+markers_coord <- markers_coord %>%
+  left_join(marker_data, by = c("adm0_a3" = "country_code"))
+
+markers_coord <- markers_coord %>%
+  mutate(
+    regime_text = ifelse(
+      is.na(regime_text),
+      paste0("<b>", admin, "</b><br/>No data found"),
+      regime_text)
+    )
+```
+
+```{r}
+map <- leaflet(world_democracy) |> 
+  addTiles() |> 
+  #country polygons for color
+  addPolygons(
+    fillColor = ~dem_palette(is_democracy),
+    fillOpacity = 0.7,
+    color = "white",
+    weight = 1
+  ) |> 
+  addLegend(
+    position = "bottomright",
+    colors = c("#ee6b6e", "steelblue"),
+    values = ~is_democracy,
+    title = NULL,
+    labels = c("Non-Democratic", "Democratic")
+  ) |> 
+  addCircleMarkers(
+    data = markers_coord,
+    lng = ~lng,
+    lat = ~lat,
+    radius = 5,
+    stroke = TRUE,
+    color = "black",
+    weight = 1,
+    fillColor = "yellow",
+    fillOpacity = 0.9,
+    popup = ~regime_text
+  )
+
+map
+```
+
