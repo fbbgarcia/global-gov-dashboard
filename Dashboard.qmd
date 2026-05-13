@@ -11,6 +11,12 @@ logo-alt: "Courthouse icon."
 theme: cosmo
 ---
 
+TO DO:
+ - interactivity: add dropdown for top 5 countries in a sidebar (Kaatje)
+ - clean model: get rid of estimates and plot, add description of model, distill interpretations (Jett)
+ - add data scources (in footnotes?) (Franchesca)
+ - increase text size in banners (Franchesca)
+
 ```{r}
 #| label: dependencies
 
