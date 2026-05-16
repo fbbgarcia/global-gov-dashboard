@@ -11,7 +11,18 @@ logo-alt: "Courthouse icon."
 theme: cosmo
 ---
 
-TO DO: - interactivity: add dropdown for top 5 countries in a sidebar (Kaatje) - clean model: get rid of estimates and plot, add description of model, distill interpretations (Jett) - add data scources (in footnotes?) (Franchesca) - increase text size in banners (Franchesca)
+<style>
+.value-box-title {
+  font-size: 1.2rem !important;
+}
+.bslib-value-box p:not(.value-box-title):not(.source-note) {
+  font-size: 1rem !important;
+}
+.source-note {
+  font-size: 0.75rem !important;
+  color: gray;
+}
+</style>
 
 ```{r}
 #| label: dependencies
@@ -59,6 +70,11 @@ coups <- read_tsv("http://www.uky.edu/~clthyn2/coup_data/candidate_dataset.txt")
 
 ::: {.valuebox title="Non-Democratic Spells"}
 How long does it take for countries that transition away from democracy to return to it and what factors influence this?
+
+<p class="source-note" style="font-size: 0.75rem; color: gray; margin-top: auto; padding-top: 8px;">
+  Source: Bjørnskov & Rode, "Regime Types and Regime Change" Dataset v6.2, 
+Review of International Organizations (2020)
+</p>
 :::
 
 ### Row {height="50%"}
@@ -387,7 +403,11 @@ div(
 ## Row
 
 ::: {.valuebox title="Bolivia"}
-According to Powell & Thyne (2011), Bolivia has the highest number of verified coup d'états (successful and unsuccessful) from 1950 to 2010.<br>Let's investigate the regime changes at each verified attempt.
+Bolivia has the highest number of verified coup d'états (successful and unsuccessful) from 1950 to 2010. Let's investigate the regime changes at each verified attempt.
+
+<p class="source-note" style="font-size: 0.75rem; color: gray; margin-top: auto; padding-top: 8px;">
+  Source: Thyne & Powell, Coup d'État Dataset, University of Kentucky
+</p>
 :::
 
 ::: {.card height="80%"}
