@@ -11,11 +11,7 @@ logo-alt: "Courthouse icon."
 theme: cosmo
 ---
 
-TO DO:
- - interactivity: add dropdown for top 5 countries in a sidebar (Kaatje)
- - clean model: get rid of estimates and plot, add description of model, distill interpretations (Jett)
- - add data scources (in footnotes?) (Franchesca)
- - increase text size in banners (Franchesca)
+TO DO: - interactivity: add dropdown for top 5 countries in a sidebar (Kaatje) - clean model: get rid of estimates and plot, add description of model, distill interpretations (Jett) - add data scources (in footnotes?) (Franchesca) - increase text size in banners (Franchesca)
 
 ```{r}
 #| label: dependencies
@@ -61,15 +57,15 @@ coups <- read_tsv("http://www.uky.edu/~clthyn2/coup_data/candidate_dataset.txt")
 
 ### Row
 
-:::{.valuebox title="Non-Democratic Spells"}
+::: {.valuebox title="Non-Democratic Spells"}
 How long does it take for countries that transition away from democracy to return to it and what factors influence this?
 :::
 
 ### Row {height="50%"}
 
 ::: panel-tabset
-
 ## World Map
+
 ```{r}
 #| label: map-democracy-or-not-interactive-map
 
@@ -159,8 +155,7 @@ map <- leaflet(world_democracy) |>
 map
 ```
 
-
-The interactive map shows <span style='color:steelblue'><b>Democratic</b></span> and <span style='color:#ee6b6e'><b>Non-Democratic</b></span> Regimes Around the Globe. Each countries marker reveals a list of the previous regime types the country has had along with the year said regime began. Non-democratic regimes are more concentrated in regions such as Africa, the Middle East, and Southeast Asia.
+The interactive map shows [<b>Democratic</b>]{style="color:steelblue"} and [<b>Non-Democratic</b>]{style="color:#ee6b6e"} Regimes Around the Globe. Each countries marker reveals a list of the previous regime types the country has had along with the year said regime began. Non-democratic regimes are more concentrated in regions such as Africa, the Middle East, and Southeast Asia.
 
 ## Changes
 
@@ -249,7 +244,6 @@ regime_change_freq |>
 ```
 
 Most transitions into democratic regimes originate from military or civilian dictatorship.
-
 :::
 
 ## Column
@@ -257,105 +251,30 @@ Most transitions into democratic regimes originate from military or civilian dic
 ### Row {height="50%"}
 
 ::: panel-tabset
+## Our Model
 
-```{r}
-#| label: survival-model-km
+To better understand how regime characteristics are associated with democratic spells, we fit a Cox proportional hazards model. This is a common survival analysis technique used to model the time until an event occurs. In this case, our event of interest is the return to a democratic regime.
 
-# Survival model setup
+The model estimates how regime characteristics are associated with the hazard of democratization, or the likelihood that a country returns to a democracy at a given point in time. Results are reported as hazard ratios – Let's interpret some on the next tab.
 
-survival_base <- democracy |>
-  arrange(country_code, year) |>
-  group_by(country_code) |>
-  mutate(lost_democracy = is_democracy == FALSE & lag(is_democracy, default = TRUE),
-         spell_id = cumsum(lost_democracy),
-         next_is_democracy = lead(is_democracy))
+**Note:** Our model is stratified by region and clustered by country in order to meet the proportional hazard and independence assumptions for this model.
 
-spell_starts <- survival_base |>
-  filter(lost_democracy == TRUE) |>
-  select(country_code,
-         spell_id,
-         region,
-         is_communist,
-         is_multiparty)
+## Interpretations
 
-survival <- survival_base |>
-  filter(is_democracy == FALSE) |>
-  group_by(country_code, spell_id) |>
-  summarize(start_year = min(year),
-            end_year = max(year),
-            returned_to_democracy = any(next_is_democracy == TRUE, na.rm = TRUE),
-            time = end_year - start_year + 1,
-            .groups = "drop")
+There are 255 non-democratic spells, 178 of which return to democracy. The Cox proportional hazards model significantly predicts "time to democracy" (p = 0.003).
 
-survival <- survival |>
-  left_join(spell_starts, by = c("country_code", "spell_id"))
+- Communist regimes are about **96% less likely** to return to democracy compared to non-communist regimes (p \< 0.001).
 
-# Survival analysis model
-km <- survfit(Surv(time, returned_to_democracy) ~ 1,
-              data = survival)
-```
+- There is insufficient evidence to conclude that multiparty systems relate to the likelihood of a non-democratic regime returning to democracy (p = 0.65).
 
-## Hazard Ratio Estimates
-
-```{r}
-#| label: survival-model-cox
-
-# Cox Proportional Hazards Model
-cox_model <- coxph(Surv(time, returned_to_democracy) ~
-                     region + 
-                     is_communist + 
-                     is_multiparty,
-                   data = survival)
-
-#summary(cox_model)
-
-tbl_regression(cox_model, 
-               exponentiate = TRUE,
-               label = list(
-                 is_communist ~ "Communist",
-                 region ~ "Region",
-                 is_multiparty ~ "Multiparty System"
-                 )
-               )|> 
-  bold_labels() |>
-  as_gt() |>
-  tab_style(cell_text(weight = "bold"),
-            locations = cells_column_labels(everything())) |>
-  tab_caption(caption = md("Cox Proportional Hazards Model Coefficent Estimates"))
-```
-
-## Hazard Ratio Interpretations
-
-There are 255 non-democratic spells, 178 of which return to democracy. The Cox Proportional Hazards Model significantly predicts "time to democracy" (p \< 2e-16)
-
-- Countries in Europe & Central Asia return to democracy about **2.67 times faster** than the baseline region, East Asia & Pacific (p = 0.013).
-
-- Countries in Latin America & the Caribbean return to democracy about **3.31 times faster** than the baseline region, East Asia & Pacific (p \< 0.001).
-
-- Countries in the Middle East & North Africa are about **96.4% less likely** to return to democracy than the baseline region, East Asia & Pacific (p = 0.001).
-
-- Communist regimes are about **78% less likely** to return to democracy compared to non-communist regimes (p \< 0.001).
-
-- There is insufficient evidence to conclude that multiparty systems affect the likelihood of a non-democratic regime returning to democracy (p = 0.42).
-
-
-## Plot
-
-```{r}
-plot(km,
-     xlab = "Years Since Losing Democracy",
-     ylab = "")
-
-title(main = "Probability of Remaing Non-Democratic Decreases Over Time", adj = 0)
-```
-
+The full model output can be found [here](https://jettpalmer.github.io/democracy/#modeling) but was excluded from the dashboard for brevity.
 :::
 
 ### Row {height="50%"}
 
 ::: panel-tabset
-
 ## Regions
+
 ```{r}
 #| label: governance-by-world-region-table
 
@@ -461,20 +380,17 @@ div(
   table1
 )
 ```
-
 :::
-
 
 # Highlight: Bolivia
 
 ## Row
 
-:::{.valuebox title="Bolivia"}
+::: {.valuebox title="Bolivia"}
 According to Powell & Thyne (2011), Bolivia has the highest number of verified coup d'états (successful and unsuccessful) from 1950 to 2010.<br>Let's investigate the regime changes at each verified attempt.
 :::
 
-:::{.card height="80%"}
-
+::: {.card height="80%"}
 ```{r}
 # Identify country of interest (highest number of verified )
 country_of_interest <- coups |>
@@ -524,7 +440,4 @@ plot <- plot_data |>
 # Plug into plotly
 ggplotly(plot, tooltip = "text")
 ```
-
 :::
-
-
