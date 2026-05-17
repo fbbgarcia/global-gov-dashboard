@@ -9,6 +9,7 @@ format:
 logo: images/courthouse.png
 logo-alt: "Courthouse icon."
 theme: cosmo
+server: shiny
 ---
 
 <style>
@@ -26,6 +27,7 @@ theme: cosmo
 
 ```{r}
 #| label: dependencies
+#| context: setup
 
 library(tidyverse)
 library(gt)
@@ -43,10 +45,12 @@ library(gtsummary)
 library(htmltools)
 library(plotly)
 library(leaflet)
+library(shiny)
 ```
 
 ```{r}
 #| label: load-data
+#| context: data
 
 # Load in master dataset joined from 3 sources above
 # We saved this locally to avoid re-scraping on every render
@@ -84,6 +88,7 @@ Review of International Organizations (2020)
 
 ```{r}
 #| label: map-democracy-or-not-interactive-map
+
 
 # Most recent year for each country, for coloring purpose
 recent <- democracy %>%
@@ -400,7 +405,9 @@ div(
 
 # Highlight: Bolivia
 
-## Row
+## column {width=25%}
+
+### Value Box
 
 ::: {.valuebox title="Bolivia"}
 Bolivia has the highest number of verified coup d'états (successful and unsuccessful) from 1950 to 2010. Let's investigate the regime changes at each verified attempt.
@@ -410,54 +417,76 @@ Bolivia has the highest number of verified coup d'états (successful and unsucce
 </p>
 :::
 
-::: {.card height="80%"}
+### Row
+
 ```{r}
-# Identify country of interest (highest number of verified )
-country_of_interest <- coups |>
+#| title: "Countries with the most Coup d'états"
+
+# Identify countries of interest (5 highest number of verified)
+top_5_coup_countries <- coups |>
   filter(verified %in% c(1, 2)) |>
   count(country, sort = TRUE) |>
-  slice_head(n = 1) |>
+  slice_head(n = 5) |>
   pull(country)
 
-# Prepare data for plotting; join w/ coup data
-plot_data <- coups |>
-  filter(country == country_of_interest) |>
-  drop_na(verified) |>
-  arrange(year, month, day) |>
-  mutate(coup_number = row_number(),
-         coup_result = if_else(verified == 2, "Successful", "Unsuccessful")) |>
-  left_join(democracy |>
-              arrange(country_name, year) |>
-              group_by(country_name) |>
-              mutate(regime_after = lead(regime_category)) |>
-              ungroup(),
-            by = c("country" = "country_name", "year" = "year")) |>
-  relocate(coup_number, coup_result, regime_category, regime_after, .after = day) |>
-  mutate(hover_text = str_glue("Country: {country}<br>",
-                               "Date: {month}-{day}-{year}<br>",
-                               "Coup Attempt #: {coup_number}<br>",
-                               "Result: {coup_result}<br>",
-                               "Regime Before: {regime_category}<br>",
-                               "Regime After: {regime_after}"))
+selectInput('country_of_interest', 'Select Country of Interest', 
+            top_5_coup_countries,
+            width = "300px")
+```
 
-# Create plot
-plot <- plot_data |>
-  ggplot(aes(x = year,
-             y = coup_number,
-             color = coup_result,
-             text = hover_text,
-             group = 1)) +
-  geom_line(color = "gray60") +
-  geom_point(size = 3) +
-  scale_color_manual(values = c("Successful" = "#ee6b6e",
-                                "Unsuccessful" = "steelblue")) +
-  labs(title = "Bolivian Coup d'états (<span style='color:#ee6b6e;'>Successful</span> & <span style='color:steelblue;'>Unsuccessful</span>)",
-       y = "Count",
-       x = "Year") +
-  theme_minimal() +
-  theme(legend.position = "none")
+## Column {width=75%}
 
-# Plug into plotly
-ggplotly(plot, tooltip = "text")
+::: {.card}
+```{r}
+plotlyOutput('coup_plot')
 ```
 :::
+
+```{r}
+#| context: server
+
+
+#Reactive Plot
+output$coup_plot <- renderPlotly({
+  # Prepare data for plotting; join w/ coup data
+  plot_data <- coups |>
+    filter(country == input$country_of_interest) |>
+    drop_na(verified) |>
+    arrange(year, month, day) |>
+    mutate(coup_number = row_number(),
+           coup_result = if_else(verified == 2, "Successful", "Unsuccessful")) |>
+    left_join(democracy |>
+                arrange(country_name, year) |>
+                group_by(country_name) |>
+                mutate(regime_after = lead(regime_category)) |>
+                ungroup(),
+              by = c("country" = "country_name", "year" = "year")) |>
+    relocate(coup_number, coup_result, regime_category, regime_after, .after = day) |>
+    mutate(hover_text = str_glue("Country: {country}<br>",
+                                 "Date: {month}-{day}-{year}<br>",
+                                 "Coup Attempt #: {coup_number}<br>",
+                                 "Result: {coup_result}<br>",
+                                 "Regime Before: {regime_category}<br>",
+                                 "Regime After: {regime_after}"))
+  # Create plot
+  plot <- plot_data |>
+    ggplot(aes(x = year,
+               y = coup_number,
+               color = coup_result,
+               text = hover_text,
+               group = 1)) +
+    geom_line(color = "gray60") +
+    geom_point(size = 3) +
+    scale_color_manual(values = c("Successful" = "#ee6b6e",
+                                  "Unsuccessful" = "steelblue")) +
+    labs(title = paste(input$country_of_interest, "Coup d'états (<span style='color:#ee6b6e;'>Successful</span> & <span style='color:steelblue;'>Unsuccessful</span>)"),
+         y = "Count",
+         x = "Year") +
+    theme_minimal() +
+    theme(legend.position = "none")
+
+  # Plug into plotly
+  ggplotly(plot, tooltip = "text")
+
+})
+```
