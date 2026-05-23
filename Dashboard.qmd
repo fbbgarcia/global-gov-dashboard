@@ -12,18 +12,24 @@ theme: cosmo
 server: shiny
 ---
 
+```{=html}
 <style>
 .value-box-title {
   font-size: 1.2rem !important;
 }
-.bslib-value-box p:not(.value-box-title):not(.source-note) {
-  font-size: 1rem !important;
+
+.bslib-value-box p {
+  font-size: 1rem;
 }
-.source-note {
+
+.bslib-value-box .source-note {
   font-size: 0.75rem !important;
-  color: gray;
+  color: gray !important;
+  margin-top: auto;
+  padding-top: 8px;
 }
 </style>
+```
 
 ```{r}
 #| label: dependencies
@@ -75,8 +81,8 @@ coups <- read_tsv("http://www.uky.edu/~clthyn2/coup_data/candidate_dataset.txt")
 ::: {.valuebox title="Non-Democratic Spells"}
 How long does it take for countries that transition away from democracy to return to it and what factors influence this?
 
-<p class="source-note" style="font-size: 0.75rem; color: gray; margin-top: auto; padding-top: 8px;">
-  Source: Bjørnskov & Rode, "Regime Types and Regime Change" Dataset v6.2, 
+<p class="source-note">
+Data: Bjørnskov & Rode, "Regime Types and Regime Change" Dataset v6.2,
 Review of International Organizations (2020)
 </p>
 :::
@@ -161,13 +167,6 @@ map <- leaflet(world_recent) |>
     color = "white",
     weight = 1
   ) |> 
-  addLegend(
-    position = "bottomright",
-    colors = c("#ee6b6e", "steelblue"),
-    values = ~is_democracy,
-    title = NULL,
-    labels = c("Non-Democratic", "Democratic")
-  ) |> 
   addCircleMarkers(
     data = markers_coord,
     lng = ~lng,
@@ -179,6 +178,11 @@ map <- leaflet(world_recent) |>
     fillColor = "yellow",
     fillOpacity = 0.9,
     popup = ~regime_text
+  ) |>
+  setView(
+    lng = 12.5,
+    lat = 42.5,
+    zoom = 1
   )
 
 map
@@ -279,14 +283,20 @@ Most transitions into democratic regimes originate from military or civilian dic
 
 ### Row {height="50%"}
 
-::: panel-tabset
+:::: panel-tabset
 ## Our Model
 
-To better understand how regime characteristics are associated with democratic spells, we fit a Cox proportional hazards model. This is a common survival analysis technique used to model the time until an event occurs. In this case, our event of interest is the return to a democratic regime.
+#### How We Modeled Return to Democracy 
 
-The model estimates how regime characteristics are associated with the hazard of democratization, or the likelihood that a country returns to a democracy at a given point in time. Results are reported as hazard ratios – Let's interpret some on the next tab.
+A Cox proportional hazards model helps us understand how regime characteristics are associated with the time it takes for a non-democratic spell to end.
 
-**Note:** Our model is stratified by region and clustered by country in order to meet the proportional hazard and independence assumptions for this model.
+In this dashboard, the event of interest is a country returning to democracy. The model estimates the **hazard of democratization**, or the likelihood that a country returns to democracy at a given point in time.
+
+Results are reported as **hazard ratios**, which compare the rate of return to democracy between groups.
+
+::: {.callout-note appearance="minimal"}
+Our model is stratified by region and clustered by country in order to better address the proportional hazard and independence assumptions.
+:::
 
 ## Interpretations
 
@@ -297,7 +307,7 @@ There are 255 non-democratic spells, 178 of which return to democracy. The Cox p
 - There is insufficient evidence to conclude that multiparty systems relate to the likelihood of a non-democratic regime returning to democracy (p = 0.65).
 
 The full model output can be found [here](https://jettpalmer.github.io/democracy/#modeling) but was excluded from the dashboard for brevity.
-:::
+::::
 
 ### Row {height="50%"}
 
@@ -411,17 +421,17 @@ div(
 ```
 :::
 
-# Highlight: Bolivia
+# Coups By Country
 
-## column {width=25%}
+## column {width="25%"}
 
 ### Value Box
 
-::: {.valuebox title="Bolivia"}
-Bolivia has the highest number of verified coup d'états (successful and unsuccessful) from 1950 to 2010. Let's investigate the regime changes at each verified attempt.
+::: {.valuebox title="Coups By Country"}
+These countries have the highest number of verified coup d’états (successful and unsuccessful) from 1950 to 2010. Let’s investigate the regime changes at each verified attempt.
 
-<p class="source-note" style="font-size: 0.75rem; color: gray; margin-top: auto; padding-top: 8px;">
-  Source: Thyne & Powell, Coup d'État Dataset, University of Kentucky
+<p class="source-note">
+Data: Thyne & Powell, Coup d'État Dataset, University of Kentucky
 </p>
 :::
 
@@ -442,9 +452,9 @@ selectInput('country_of_interest', 'Select Country of Interest',
             width = "300px")
 ```
 
-## Column {width=75%}
+## Column {width="75%"}
 
-::: {.card}
+::: card
 ```{r}
 plotlyOutput('coup_plot')
 ```
