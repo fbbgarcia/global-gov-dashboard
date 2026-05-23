@@ -36,3 +36,6 @@ rsconnect/
 .positai
 STAT541-Project2.Rproj
 .DS_Store
+
+/.quarto/
+**/*.quarto_ipynb
