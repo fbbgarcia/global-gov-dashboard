@@ -4,11 +4,8 @@ format:
   dashboard:
     orientation: columns
     nav-buttons:
-      - github
-    repo-links:
-      - text: GitHub
+      - icon: github
         href: https://github.com/fbbgarcia/STAT541-Project2
-        icon: github
     embed-resources: true
 logo: images/courthouse.png
 logo-alt: "Courthouse icon."
